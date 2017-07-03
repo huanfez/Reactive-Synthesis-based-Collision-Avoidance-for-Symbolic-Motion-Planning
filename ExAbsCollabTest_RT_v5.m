@@ -1,4 +1,4 @@
-% Redesigned for trust based goal reassign
+% Main file
 
 clear
 clc;
@@ -10,34 +10,22 @@ gridWidth = 10;
 gridLength = 10;
 
 %agents and obstacles information 1
-start = [31;3;41;10]; % per agent
-obstacles = [13, 56, 86, 88, 77, 24, 35, 45, 83, 94, 80, 70, 69, 48, 38, 95, 82, 83];
-goals = [{[54, 36]}; {[17, 87]}; {[64, 28]}; {[72, 93]}];% agent per row
-goals1Dem = [54, 36, 17, 87, 64, 28, 72, 93];
+start = [5; 41; 49; 85]; % per agent
+obstacles = [16 62 33 37 91 100];
+goals = [{75}; {48}; {42};{15}];% agent per row
+goals1Dem = [75, 48, 42, 15];
 
 % %agents and obstacles information 2
-% start = [5; 41; 49]; % per agent
-% obstacles = [16 62 65 33 37 91 100];
-% goals = [{75}; {48}; {42}];% agent per row
-% goals1Dem = [75, 48, 42];
+% start = [31;3;41;10]; % per agent
+% obstacles = [13, 56, 86, 88, 77, 24, 35, 45, 94, 80, 70, 69, 48, 38, 95, 82, 83];
+% goals = [{[54, 36]}; {[17, 87]}; {[64, 28]}; {[72, 93]}];% agent per row
+% goals1Dem = [54, 36, 17, 87, 64, 28, 72, 93];
 
 % %agents and obstacles information 3
-% start = [31;41;3]; % per agent
+% start = [31;41;3;10]; % per agent
 % obstacles = [13, 56, 86, 88, 77, 24, 35, 45, 94, 80, 70, 69, 48, 38, 95, 82, 83];
-% goals = [{[54, 36]}; {[64, 27]}; {[17, 87]}];% agent per row
-% goals1Dem = [54, 36, 64, 27, 17, 87];
-
-% %agents and obstacles information 4
-% start = [11;91;20]; % agent per row
-% obstacles = [13, 56, 86, 88, 77, 24, 35, 45, 83, 94, 80, 70, 69, 48, 38, 95];
-% goals = [{[25, 54]}; {[84, 100]}; {[17, 87]}];% agent per row
-% goals1Dem = [25, 54, 84, 100, 17, 87];
-
-% % agents and obstacles information 5
-% start = [12;91;20]; % agent per row
-% obstacles = [13, 56, 86, 88, 77, 24, 35, 45, 83, 94, 80, 70, 69, 48, 38, 95];
-% goals = [{[25, 54]}; {[84, 100]}; {[17, 87]}];% agent per row
-% goals1Dem = [25, 54, 84, 100, 17, 87];
+% goals = [{[54, 36]}; {[64, 28]}; {[17, 87]}; {[72, 93]}];% agent per row
+% goals1Dem = [54, 36, 64, 28, 17, 87, 72, 93];
 
 M = 4; % number of agents used
 
@@ -45,9 +33,10 @@ M = 4; % number of agents used
 goalsReached = cell(M,1);
 goalsReachedAll = [];
 goalsLeft = goals;
-goalTol = .125; % "radius" of accepting box in cell
+goalTol = .100; % "radius" of accepting box in cell
 
 sensedObstacles = cell(M,1); % sensed obstacles begin as empty and seperate
+PossibleCollSec = cell(M,1);
 
 % Conversion from cell to cartesion
 xSObs = cell(M,1);
@@ -88,7 +77,7 @@ for m = 1:M
 end
 % file locations
 fileName = 'MultiTest.smv';
-filePath = 'D:\livelockAutonomous4robots\SymCodes\ReactiveCollisionAvoidance';
+filePath = 'D:\ReactiveCollisionAvoidance\ReactiveCollisionAvoidance';
 
 %% Plot Planning Environment
 % This is the initialized plot for the planning figure
@@ -118,7 +107,7 @@ xPath = cell(M,1); % path in cartesian x
 yPath = cell(M,1); % path in cartesian y
 cPath = cell(M,1); % path in cell
 gridChunk = zeros(M,4); % smallest rectangle required to produce plan
-mTrack = cell(M,1); % for collision comm, stores current and next position in plan
+%mTrack = cell(M,1); % for collision comm, stores current and next position in plan
 colorBox = ['b' 'g' 'r' 'y'];
 
 for m = 1:M % for each agent, m
@@ -135,7 +124,7 @@ for m = 1:M % for each agent, m
         [xPath{m},yPath{m},cPath{m}] = getPath(output, gridWidth, gridLength);
         % back out path from output of model checker
     end
-    mTrack{m} = cPath{m}(1:2); % update collision comm variable
+    %mTrack{m} = cPath{m}(1:2); % update collision comm variable
 end
 
 %% Plot Initial Plan
@@ -250,29 +239,26 @@ while goalsEmpty ~= 0
         if pointCounter(m)>numel(cPath{m})%%YW: in NuSMV: from start to final goal, it will return 2 more steps. we make sure that they are equal to the final state
             cPath{m}(pointCounter(m)) = cPath{m}(pointCounter(m)-2);
         end
-        mTrack{m} = cPath{m}(pointCounter(m)-1:pointCounter(m)); % update collision tracker %YW: record pos for the robot m, current pos cPath{m}(pointCounter(m)-1} and next pos cPath{m}(pointCounter(m))
+        %mTrack{m} = cPath{m}(pointCounter(m)-1:pointCounter(m)); % update collision tracker %YW: record pos for the robot m, current pos cPath{m}(pointCounter(m)-1} and next pos cPath{m}(pointCounter(m))
     end
     TempObs = cell(M,1);
     allObs = cell(M,1);
     for m = 1:M
+        PossibleCollSec{m} = [cPath{m}(pointCounter(m) - 1) - 1, cPath{m}(pointCounter(m) - 1) + 1, cPath{m}(pointCounter(m) - 1) - gridWidth, cPath{m}(pointCounter(m) - 1) + gridWidth];
         for m2 = 1:M
-            if m2 > m
-                if ismember(cPath{m}(pointCounter(m)),mTrack{m2}(2))% collision into same place %%YW: because mTrack{m2} = cPath{m2}(pointCounter(m2)-1:pointCounter(m2)), mTrack{m2}(2) is the next pos of m2, hence collision type -1 represents both robots go to the same cell at the next step
-                    mCollision{m}(m2) = -1; % YW: one robot wait for another one to pass, and it is always the robot with smaller index m that waits
+            if m2 ~= m
+                if ismember(cPath{m2}(pointCounter(m2)),PossibleCollSec{m})% collision into same place %%YW: because mTrack{m2} = cPath{m2}(pointCounter(m2)-1:pointCounter(m2)), mTrack{m2}(2) is the next pos of m2, hence collision type -1 represents both robots go to the same cell at the next step
+                    %mCollision{m}(m2) = -1; % YW: one robot wait for another one to pass, and it is always the robot with smaller index m that waits
                     TempObs{m} = [TempObs{m} cPath{m2}(pointCounter(m2))];
                     %pause
-                elseif ismember(mTrack{m2}(2),cPath{m}(pointCounter(m)-1)) && ismember(mTrack{m}(2),cPath{m2}(pointCounter(m2)-1))
-                    mCollision{m}(m2) = -2;
+                elseif ismember(cPath{m2}(pointCounter(m2)),cPath{m}(pointCounter(m)-1))
+                    %mCollision{m}(m2) = -2;
                     TempObs{m} = [TempObs{m} cPath{m2}(pointCounter(m2) - 1)];
-                else
-                    mCollision{m}(m2) = 0;
                 end
-            else
-                mCollision{m}(m2) = 0;
             end
         end
         allObs{m} = [sensedObstacles{m} TempObs{m}];
-        if ~isempty(TempObs{m})
+        if ~isempty(TempObs{m})&& ~isempty(goalsLeft{m})
             ReactColAvoidReplanScript
         end
     end    
@@ -329,7 +315,7 @@ while goalsEmpty ~= 0
                 % if this is the last goal
                 if isempty(goalsLeft{m})
                     % update the mTrack to show it's not moving
-                    mTrack{m} = [cPath{m}(pointCounter(m)),cPath{m}(pointCounter(m))];
+                    %mTrack{m} = [cPath{m}(pointCounter(m)),cPath{m}(pointCounter(m))];
                 end
             end
             if ~isempty(goalsLeft{m})
