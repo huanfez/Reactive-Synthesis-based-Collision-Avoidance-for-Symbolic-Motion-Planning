@@ -6,14 +6,26 @@ clc;
 numOFigs = 1;
 k=1;
 
+M = 4; % number of agents used
+
 gridWidth = 10;
 gridLength = 10;
 
-%agents and obstacles information 1
-start = [5; 41; 49; 85]; % per agent
-obstacles = [16 62 33 37 91 100];
-goals = [{75}; {48}; {42};{15}];% agent per row
-goals1Dem = [75, 48, 42, 15];
+%agents and environment information are randomnly deployed
+randMtr = randperm(100,30);
+start = randMtr(1:M)';
+goals = [{randMtr(end-1:end)}; {randMtr(end-3:end-2)}; {randMtr(end-5:end-4)}; {randMtr(end-7:end-6)}];
+goals1Dem = randMtr(end-2*M + 1:end);
+obstacles = randMtr;
+obstacles(end- 2*M + 1:end) = [];
+obstacles(1:M) = [];
+
+% Special environment and working conditions
+% %agents and obstacles information 1
+% start = [5; 41; 49; 85]; % per agent
+% obstacles = [16 62 33 37 91 100];
+% goals = [{75}; {48}; {42};{15}];% agent per row
+% goals1Dem = [75, 48, 42, 15];
 
 % %agents and obstacles information 2
 % start = [31;3;41;10]; % per agent
@@ -26,8 +38,6 @@ goals1Dem = [75, 48, 42, 15];
 % obstacles = [13, 56, 86, 88, 77, 24, 35, 45, 94, 80, 70, 69, 48, 38, 95, 82, 83];
 % goals = [{[54, 36]}; {[64, 28]}; {[17, 87]}; {[72, 93]}];% agent per row
 % goals1Dem = [54, 36, 64, 28, 17, 87, 72, 93];
-
-M = 4; % number of agents used
 
 %to be used in collision
 goalsReached = cell(M,1);
@@ -230,7 +240,9 @@ while goalsEmpty ~= 0
     % replaning for detected obstacles
     for m = 1:M
         if sum(ismember(cPath{m}(pointCounter(m):length(cPath{m})),sensedObstacles{m})) > 0
-            ObstacleReplanScript
+            if ~isempty(goalsLeft{m})
+                ObstacleReplanScript
+            end
         end
     end
     
